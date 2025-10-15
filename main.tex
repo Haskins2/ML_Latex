@@ -1,22 +1,33 @@
-\documentclass[12pt,a4paper]{article}
+\documentclass[11pt,a4paper]{article}
 
 % Packages
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage{amsmath}
-\usepackage{amsfonts}
-\usepackage{amssymb}
+\usepackage{amsmath,amsfonts,amssymb}
 \usepackage{graphicx}
+\usepackage{pdfpages}
 \usepackage{geometry}
 \usepackage{hyperref}
-\usepackage{listings}
-\usepackage{xcolor}
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{subcaption}
+\usepackage{url}
+
+% Compact title formatting
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\Large\bfseries}{}{0em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{}{0em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{}{0em}{}
+
+% Compact spacing
+\titlespacing*{\section}{0pt}{12pt plus 4pt minus 2pt}{6pt plus 2pt minus 2pt}
+\titlespacing*{\subsection}{0pt}{10pt plus 4pt minus 2pt}{4pt plus 2pt minus 2pt}
+\titlespacing*{\subsubsection}{0pt}{8pt plus 4pt minus 2pt}{3pt plus 2pt minus 2pt}
 
 % Page setup
 \geometry{margin=2.5cm}
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
 
 % Hyperref setup
 \hypersetup{
@@ -24,85 +35,39 @@
     linkcolor=blue,
     filecolor=magenta,      
     urlcolor=cyan,
-    citecolor=red,
+    citecolor=red
 }
 
-% Code listing setup
-\lstset{
-    basicstyle=\ttfamily\small,
-    breaklines=true,
-    frame=single,
-    numbers=left,
-    numberstyle=\tiny,
-    backgroundcolor=\color{gray!10},
-    keywordstyle=\color{blue},
-    commentstyle=\color{green!60!black},
-    stringstyle=\color{red},
-}
-
-% Title page information
-\title{Machine Learning Assignment}
-\author{Your Name}
-\date{\today}
+% Compact title page
+\title{\vspace{-2cm}\Large\textbf{Machine Learning Assignment Week 3}\\[-0em]}
+\author{\vspace{-1cm}Stephen Haskins: 21365534 \\ Dataset Header: \#1-1-1}
+\date{\vspace{-0.5cm}\today} % Small date
 
 \begin{document}
 
+% Compact title page
 \maketitle
 
-\tableofcontents
-\newpage
+% Table of contents
+% \tableofcontents
+% \newpage
 
-\section{Introduction}
+% Main content sections
+\input{sections/introduction}
+\input{sections/part_A}
 
-This document contains the solution to the machine learning assignment.
+\vspace{1em}\hrule
 
-\section{Problem Statement}
+\input{sections/part_B}
+\input{sections/conclusion}
 
-Describe the problem you are solving here.
+% References
+\bibliographystyle{unsrt}
+\bibliography{references}
 
-\section{Methodology}
-
-Explain your approach and methodology.
-
-\subsection{Data Preprocessing}
-
-Describe any data preprocessing steps.
-
-\subsection{Model Selection}
-
-Explain your model selection process.
-
-\subsection{Training Process}
-
-Describe the training process.
-
-\section{Results}
-
-Present your results here.
-
-\subsection{Performance Metrics}
-
-Include relevant performance metrics.
-
-\subsection{Visualizations}
-
-Add any relevant plots or visualizations.
-
-\section{Discussion}
-
-Discuss your findings and their implications.
-
-\section{Conclusion}
-
-Summarize your work and conclusions.
-
-\section{References}
-
-\begin{thebibliography}{9}
-
-\bibitem{example}
-Example Reference
-
-\end{thebibliography}
+% Appendices
+\appendix
+\section{Appendix: Code}
+% \input{sections/appendix}
 
 \end{document}
