@@ -1,10 +1,106 @@
-\section{A) }
-\subsection{i) Visualise the data on a 3D scatter plot}
+\section{A) Logistic Regression}
+\subsection{i) Visualise the data}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/2dDataVisualisation.png}
+    \caption{2D Scatter Plot of Ground Truth}
+    \label{fig:2dDataVisualisation}
+\end{figure}
 
-\subsection{ii) Train a Lasso Regression model and Predict target values}
+Figure~\ref{fig:2dDataVisualisation} shows a 2D scatter plot of the provided data, with blue and orange point markers to represent the two labels (+1, -1) respectively. 
+The data itself contains two features (x, y) as well as two labels (+1, -1) and is bounded in the feature space $[-1, 1] \times [-1, 1]$. 
+There is a relatively even dispersion of data points across the feature space with classes clustered via a clear non-linear decision boundary.
 
-\subsection{iii) Plot the results}
+% PROPERLY REFERENCE
+\subsection{ii) Train the Logistic Regression model}
+The logistic regression model was implemented using sklearn's LogisticRegression class with its default parameters (\cite{sklearn_logistic}). Note L2 regularisation is enabled by default. L2 regularisation is a technique used to reduce model complexity and prevent overfitting by penalising large weights.
+This logistic regression model predicts the probability of the label $y \in {-1, 1}$ for a given feature vector x.  
+The model estimates its parameters by maximising the log-likelihood of the data, thus optimising the coefficients to best separate the classes in the log-odds space. Predictions are generated using the sigmoid function, and classification is performed by thresholding the predictions at 0.5.
 
-\subsection{iv) Explain underfitting and overfitting}
+The model parameters are as follows:
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Parameter} & \textbf{Value} & \textbf{Description} \\
+        \midrule
+        $w_0$ & $1.8001$  & Intercept / bias \\
+        $w_1$ & $-0.2096$ & Coefficient for $x$ \\
+        $w_2$ & $5.0191$  & Coefficient for $y$ \\
+        \bottomrule
+    \end{tabular}
+    \caption{Logistic regression model parameters.}
+    \label{tab:lr_params}
+\end{table}
+This gives us the model:
+\begin{equation}
+P(y=1\,|\,x, y) = \sigma \left(1.8001 - 0.2096x + 5.0191y\right)
+\label{eq:logistic_model}
+\end{equation}
+where
+\begin{equation}
+\sigma(z) = \frac{1}{1 + e^{-z}}
+\label{eq:sigmoid}
+\end{equation}
+and $y \in \{-1, 1\}$.
 
-\subsection{v) Repeat for Ridge Regression}
+The logistic regression model's coefficient's reveal each feature's importance and directional influence on classification predictions.
+
+Feature 2 (y) displays the most influence on predictions with a coefficient magnitude of 5.0191, compared to Feature 1 (x) with magnitude 0.2096. This means changes in Feature 2 will have a much larger impact on the model's predictions, which, looking at the data visualisation in Figure~\ref{fig:2dDataVisualisation}, makes sense. There is clear vertical class separation. An optimised horizontal decision boundary would result in far superior class separation compared to an optimised vertical decision boundary.  
+
+The coefficient signs indicate the directional relationship between features and class predictions. Feature 2 with a positive coefficient indicates a positive correlation with probability of predicting the +1 class. The data's previously mentioned vertical class separation means that as Feature 2 increases, the probability of Label +1 increases, which perfectly matches the positive coefficient. On the other hand, feature 1 with a negative coefficient decreases the probability of predicting the +1 class. 
+
+The intercept value of 1.8001 suggests a bias toward predicting class +1 when both features equal zero. This baseline bias is expected and aligns with the observed data distribution in Figure~\ref{fig:2dDataVisualisation}, where the majority of data points belong to class +1.
+
+\subsection{iii) Predict target values}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/LR_Predictions.png}
+    \caption{Logistic Regression Predictions}
+    \label{fig:LR_Predictions}
+\end{figure}
+
+The predicted target values for the trained model are shown in Figure~\ref{fig:LR_Predictions} using coloured green and red box markers for +1 and -1 predictions respectively. The decision boundary is depicted by the black dashed line and was calculated as follows:
+
+The decision boundary is defined as the set of points where the model is maximally uncertain, i.e., when $P(y=1\,|\,x) = 0.5$. From equations~\eqref{eq:logistic_model} and~\eqref{eq:sigmoid}, it can be deduced that this is equivalent to the case where the argument of the sigmoid function is zero, i.e., $z = 0$.
+
+\begin{equation}
+1.8001 - 0.2096x + 5.0191y = 0
+\label{eq:decision_boundary}
+\end{equation}
+Solving for $y$ in terms of $x$ gives:
+\begin{equation}
+y = \frac{-1.8001 + 0.2096x}{5.0191}
+\label{eq:decision_boundary_solved}
+\end{equation}
+A range of $x$ values were substituted into Equation~\eqref{eq:decision_boundary_solved} to generate the decision boundary.
+
+\newpage
+
+\subsection{iv) Discuss the results}
+% The logistic regression model in Figure 2 achieves reasonable classification performance given the model's linear assumption.
+
+% There is a moderate amount of misclassified data points near the decision boundary.
+
+% The linear decision boundary cannot capture the non-linear separation of the underlying data. This indicates underfitting, where the model's linear assumption is too restrictive and higher dimensionality is required for this task.
+
+The performance metrics in Table \ref{tab:lr_metrics} were calculated using the sklearn.metrics module \cite{sklearn_metrics} and are as follows:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{l c}
+        \toprule
+        \textbf{Metric} & \textbf{Value} \\
+        \midrule
+        Accuracy  & 0.8719 \\
+        Precision & 0.9045 \\
+        Recall    & 0.9098 \\
+        F1-Score  & 0.9071 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Performance metrics for the logistic regression model.}
+    \label{tab:lr_metrics}
+\end{table}
+
+The logistic regression model in Figure~\ref{fig:LR_Predictions} achieves reasonable classification performance given the model's linear assumption. There is a moderate amount of misclassified data points near the decision boundary. The linear decision boundary cannot capture the non-linear nature of the underlying data, indicating underfitting. This is reflected in the performance metrics in Table~\ref{tab:lr_metrics}, with an overall accuracy of 87.2\% and balanced precision/recall values. These results indicate strong but not perfect classification performance, consistent with the visible boundary misclassifications.

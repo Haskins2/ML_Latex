@@ -1,3 +1,15 @@
-\begin{thebibliography}{}
+\begin{thebibliography}{1}
+
+\bibitem{sklearn_logistic}
+Sklearn logistic regression.
+\newblock \url{https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html}, 2025.
+
+\bibitem{sklearn_metrics}
+Sklearn metrics.
+\newblock \url{https://scikit-learn.org/stable/modules/model_evaluation.html}, 2025.
+
+\bibitem{sklearn_svm}
+Sklearn linear svm.
+\newblock \url{https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVC.html}, 2025.
 
 \end{thebibliography}
