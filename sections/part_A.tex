@@ -1,10 +1,48 @@
 \section{i) }
 \subsection{a) Describe the provided datasets}
 
+Three datasets were provided for this assignment.
+
+The first two $input\_childSpeech\_trainingSet.txt$ and $input\_childSpeech\_testSet.txt$ act as a training and test set respectively. Both of these datasets imitate how a child would speak, containing child-like sentences such as "I see bird" or "More bubbles". These datasets have an extremely small vocab size of 88. With such small vocab size, we can expect these datasets to be relatively easy for our model to learn. The training and test set have lengths of 55076 and 5347 respectively.
+
+The final dataset $input\_shakespeare.txt$ contains the script to Shakespeare's iconic plays, and thus is by far the most complex, both in terms of length and vocabulary size. This test set has a length of 202651, and a vocab size of 25670, thus we expect poor performance on this test set. Additionally, the text is formatted with speaker names, adding to the complexity of the dataset.
+
 \subsection{b) Downsize the model and provide rationale}
 
+An overly complicated model can lead to overfitting, especially with vocab sizes as small as those seen in the child speech datasets. Thus, the model has been downsized with the following hyperparameter changes:
+
+\begin{itemize}
+    \setlength{\itemsep}{0pt}
+    \item \textbf{Embedding Size: 256 $\rightarrow$ 64}: The embedding size parameter represents the size of the vector used to represent each token, in this case: a character. A larger embedding size allows the model to create richer, higher dimensional representations of each token. However it significantly increases the number of parameters, and with our very simple datasets, this parameter can be reduced without large expected performance loss.
+    \item \textbf{Number of Heads: 6 $\rightarrow$ 4}: In the Multi-Head Attention mechanism, the embedding dimension is split into several smaller "heads." Each head learns to attend to different parts of the input text simultaneously. For example, one head might focus on grammatical relationships (like subject-verb agreement), while another focuses on semantic context (like pronouns referring to earlier nouns). With fewer heads, the model has fewer independent "perspectives" to look at the data, but again, with our simple datasets, reducing the parameter slightly shouldn't result in a major loss of performance.
+    \item \textbf{Number of Layers: 6 $\rightarrow$ 4}: This parameter determines how many transformer blocks are chained together, ie: the depth of the model. More layers allow the model to learn more hierarchical and abstract features. This parameter was reduced, as it is likely for early layers to detect the simple child speech patterns. 
+\end{itemize}
+
+Note the number of iterations was also reduced from 5000 to 1000 to lower the training time.
+
+\newpage
 \subsection{c) Attempt another two ways of downsizing. Discuss.}
 
+Two additional downsizing strategies were implemented: reducing the Feed-Forward (FF) factor and enabling weight tying. Both approaches reduce parameters in different parts of the transformer architecture. 
+
+\subsection{Feed Forward Factor}
+
+A feed forward class was provided in the original code, which projects the embedding to a higher dimensional space, applies a ReLu function, and then projects it back to the original embedding size. The size/width of the hidden layer in this feed forward network is determined by the feed forward factor hyperparameter ($FF_FACTOR$). This 
+
+First, the feed forward factor was reduced from 4 to 2. This reduces the size of the feed forward layers in the transformer blocks, thus reducing the number of parameters in the model. 
+
+Second, weight tying was implemented. This shares the weights between the embedding and output layers, thus reducing the number of parameters in the model.
+
+\subsection{Weight Tying}
+
+Weight tying forces the model to use the exact same weights for the input embedding layer and the final output layer. This reduces the total number of parameters in the model, as the vocab size matrix is stored only once instead of twice. Additionally, weight tying acts as a regulariser, ensuring that the vector representation used to understand a token (input) is semantically similar to the vector used to predict that token (output). The benefits of this approach would be far more pronounced in larger vocab sizes, however it still provides a small reduction in parameters in our case.
+
+
+
 \subsection{d) Explore and describe the impact of including the bias term}
+
+
+
+
 
 \subsection{e) Explore and describe the impact of including skip connections}
