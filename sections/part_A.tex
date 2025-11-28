@@ -1,101 +1,10 @@
 \section{i) }
-\subsection{a) Train LR model and perform grid search}
-In this section we are required to optimise the Logistic Regression classifier by using cross-validation to determine both the maximum polynomial degree and the optimal value of C. 
-These two model parameters are interdependent, thus requiring a grid search across a range of values. Polynomial degrees ranged from 1 to 10, and C values ranged from 1 to 1000. The optimal combination of parameters was selected based on the models prediction accuracy. 
+\subsection{a) Describe the provided datasets}
 
-5-fold cross-validation was used to estimate the classification accuracy for each combination of parameters, and the mean accuracy across folds was recorded. The accuracy metric was chosen because it directly measures the correct predictions. However, this metric can be misleading if there is significant class imbalance in the data. Similar to previous assignments, sklearn's LogisticRegression \cite{sklearn_logistic} and PolynomialFeatures \cite{sklearn_polynomial_features} classes were used.  A heat map displaying the mean 5-fold cross-validation accuracy results across the grid search is shown below in Figure \ref{fig:d1_heatmap}.
+\subsection{b) Downsize the model and provide rationale}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.75\linewidth]{figures/d1_heatmap.png}
-    \caption{5-fold cross-validation accuracy heatmap for a range of polynomial degrees and C.}
-    \label{fig:d1_heatmap}
-\end{figure}
+\subsection{c) Attempt another two ways of downsizing. Discuss.}
 
-For Dataset 1, the heatmap shows that model performance is relatively insensitive to changes in either C or polynomial degree within the tested range. Mean accuracy remains at 0.68 for all values of C with a polynomial degree $\le$ 3. This suggests that neither increasing model complexity nor adjusting regularisation strength provides meaningful improvement. These results confirm our prediction that the dataset simply contains too much noise, and no meaningful relationship between variables can be identified.  
+\subsection{d) Explore and describe the impact of including the bias term}
 
-A second plot, visualising the effects of and further refining the parameter C with the optimal polynomial degree (chosen to be 1 for simplicity), is shown in Figure \ref{fig:d1_c_plot}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.65\linewidth]{figures/d1_c_plot.png}
-    \caption{Plot of CV error vs C parameter}
-    \label{fig:d1_c_plot}
-\end{figure}
-
-The mean cross-validation error remains constant across all tested C values, indicating that the regularisation strength has no influence on the model's performance. The optimal C was taken to be 1.0, but this selection is not statistically significant.
-
-Overall, these cross-validation results suggest that for Dataset 1, a simple linear model (degree = 1, C=1) performs as well as more complex alternatives. The insensitivity of accuracy to both parameters confirms that model complexity cannot compensate for the high level of noise in the data.
-
-Finally, Figure \ref{fig:d1_db} shows the decision boundary of the optimal model overlaid on the training data.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/d1_db.png}
-    \caption{Logistic Regression Decision Boundary}
-    \label{fig:d1_db}
-\end{figure}
-
-This plot, as well as the following confusion matrix, reveals that the classifier predicts all samples as belonging to the +1 class (blue region), with no separation between classes. This highlights how accuracy can be misleading in the presence of class imbalance, as it reports the trivial majority-class classifier to have an accuracy of 68\%, demonstrating that a single metric alone cannot capture true model performance 
-
-The outcome indicates that the model has effectively converged to a constant prediction, suggesting that the features provide little discriminative information for the target variable. The absence of a clear boundary is consistent with the cross-validation results, which showed little sensitivity to model complexity. These results confirm that the dataset is too noisy for polynomial Logistic Regression to extract a meaningful boundary.
-
-\subsection{b) Train a kNN model and find the optimal value of k}
-The k-Nearest Neighbours (kNN) algorithm is a non-parametric classifier that assigns a class label to a new data point based on the majority class among its $k$ nearest neighbours, measured using Manhattan or Euclidean distance. Unlike Logistic Regression, kNN makes no assumptions about the form of the decision boundary, enabling it to capture nonlinear relationships but making it sensitive to noise and the choice of k.
-
-The model was implemented using sklearn's KNeighborsClassifier \cite{sklearn_knn}, with Euclidean distance. To identify the optimal value of k, 5-fold cross-validation was performed.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/d1_k_plot.png}
-    \caption{5-fold CV error vs k}
-    \label{fig:d1_k_plot}
-\end{figure}
-
-Figure \ref{fig:d1_k_plot} shows the mean CV classification error with error bars representing standard deviation across folds. The error decreases sharply for small k values, then begins to plateau around k=25, with a minimum error of 0.319 ± 0.007 at k=35. This indicates that larger k values improve generalisation by smoothing local noise, while very small k leads to overfitting.
-
-Figure \ref{fig:d1_db_knn} shows the decision boundary for k=35. The classifier forms a few compact clusters of the minority class, reflecting its ability to capture local nonlinear structure. However, the severe overlap between classes limits the achievable accuracy, consistent with the noisy nature of the dataset.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/d1_db_knn.png}
-    \caption{Decision boundary for kNN}
-    \label{fig:d1_db_knn}
-\end{figure}
-
-Overall, k=35 provides the best trade-off between bias and variance. Compared with Logistic Regression, kNN performs slightly better by modelling nonlinear boundaries, though both are constrained by the weak class separability in this data.
-
-\subsection{c) Plot the confusion matrices for both models}
-
-A confusion matrix summarises a classifier's performance by comparing predicted and true class labels. The diagonal entries represent correct predictions, while the off-diagonal entries show misclassifications. Confusion matrices were computed for the Logistic Regression, kNN, and a baseline dummy classifier, which makes random predictions with equal probability for each class. These were generated using sklearn's confusion\_matrix function \cite{sklearn_confusion_matrix}. Figure \ref{fig:d1_cm} displays the three matrices side by side.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/d1_cm.png}
-    \caption{Dataset 1 Confusion Matrices}
-    \label{fig:d1_cm}
-\end{figure}
-
-
-\subsection{d) Plot the ROC curves for both models}
-
-ROC curves illustrate the trade-off between the true positive rate and the false positive rate across different classification thresholds. To generate the curves for the trained Logistic Regression and kNN classifiers, predicted probabilities for each class were computed for all samples. These probabilities were then used to calculate the true positive and false positive rates needed for plotting the ROC curves.
-
-The area under each curve (AUC) provides a single numerical measure of performance, with higher values indicating better discrimination between classes. Figure \ref{fig:d1_roc} shows the resulting ROC curves, with the Logistic Regression and kNN models compared against the random baseline.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/d1_roc.png}
-    \caption{Dataset 1 ROC curves}
-    \label{fig:d1_roc}
-\end{figure}
-
-\subsection{e) Compare both models}
-
-The confusion matrices and ROC curves provide a clear comparison of model performance. The Logistic Regression model predicts all samples as belonging to the positive class (+1), resulting in an AUC of 0.509, close to random guessing. This indicates that the model failed to identify any meaningful decision boundary, consistent with the earlier observation that the dataset contains little separable structure.
-
-The kNN classifier performs moderately better, correctly identifying small subsets of the minority class. Its AUC of 0.583 exceeds both Logistic Regression and the random baseline (AUC=0.5), suggesting limited but genuine discriminative ability. However, the overall improvement remains small, reflecting the noisy nature of the data and the substantial class overlap observed in earlier plots.
-
-The baseline dummy classifier, which predicts classes randomly, achieves roughly balanced outcomes across both classes, as expected. Its confusion matrix and ROC curve confirm chance-level behaviour.
-
-Overall, while the kNN model marginally outperforms Logistic Regression, neither model achieves reliable separation between classes. Given this, no classifier can be confidently recommended for practical use on this dataset. The results indicate that the features provide insufficient information to support effective classification, and collecting higher-quality or more informative data would likely yield greater improvement than further model tuning.
+\subsection{e) Explore and describe the impact of including skip connections}
