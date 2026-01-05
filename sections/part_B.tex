@@ -1,0 +1,57 @@
+\section{ii) Evaluate the model}
+
+\subsection{a) Select best model and calculate test loss on child speech dataset. Discuss}
+
+The best-performing model from Part (i) was chosen to be the hyperparameter configuration with bias and skip connections enabled as it had the best empircal results. This model was evaluated on the held-out child speech test set \texttt{input\_childSpeech\_testSet.txt}. Table~\ref{tab:test_results} shows the results compared to a uniform baseline model. The baseline model chosen simply assigns equal probability to all characters in the vocabulary.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\hline
+\textbf{Model} & \textbf{Child Speech Test Loss} & \textbf{Difference from Baseline} \\
+\hline
+Trained Model & $0.3501$ & $-3.3388$ \\
+Uniform Baseline & $3.6889$ & $0.0000$ \\
+\hline
+\end{tabular}
+\caption{Test set performance on child speech data.}
+\label{tab:test_results}
+\end{table}
+
+The trained model achieved a test loss of $0.3501$, which represents a substantial improvement over the uniform baseline loss of $3.6889$. The difference of $-3.3388$ indicates that the model assigns significantly higher probability to the correct tokens compared to a random predictor, demonstrating effective learning of the underlying data distribution.
+
+The test loss ($0.3501$) is remarkably close to the final validation loss ($0.3420$), with a difference of only $0.0081$. This minimal difference indicates that the model generalises well to unseen data, without overfitting to the training or validation sets. The consistency across datasets validates the model's robustness.
+
+The model's performance is $10.5\times$ better than the uniform baseline. This demonstrates that the model has learned meaningful patterns in child speech rather than memorising training examples. 
+
+The low test loss indicates that the model successfully captured the patterns of child speech. The limited vocabulary, repetitive phrases, and simple grammatical structures create a learnable dataset that a relatively small transformer can approximate effectively.
+
+\subsection{b) Calculate loss on Shakespeare dataset. Discuss}
+
+The same trained model was evaluated on \texttt{input\_shakespeare.txt}, which represents dramatically more complex english compared to the child speech training data.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\hline
+\textbf{Model} & \textbf{Shakespeare Test Loss} & \textbf{Difference from Baseline} \\
+\hline
+Trained Model & $6.4054$ & $+2.7166$ \\
+Uniform Baseline & $3.6889$ & $0.0000$ \\
+\hline
+\end{tabular}
+\caption{Cross-domain evaluation on Shakespeare text showing performance degradation on out-of-distribution data.}
+\label{tab:shakespeare_results}
+\end{table}
+
+The model's performance on Shakespeare is dramatically worse than on child speech, with a test loss of $6.4054$. Interestingly, the model also performed worse than the uniform baseline, with a difference of $+2.7166$. This is quite counterintuitive but could due to multiple factors. 
+
+There were 25 unique characters present in the Shakespeare text do not appear in the child speech vocabulary. These out of vocabulary words were mapped to index 0 for evaluation purposes. This means that the model is effectively forced to predict a large number of unknown tokens, which it has no learned representation for. The uniform baseline, on the other hand, assigns equal probability to all characters, including those not seen during training.
+
+Beyond vocabulary differences, Shakespeare's English uses complex syntax, vocabulary, and rhetorical devices that are entirely absent from child speech. The model was trained for short, simple utterances like ``I want cookie.'' When applied to complex sentences such as ``To be, or not to be, that is the question,'' the model's learned conditional probabilities are fundamentally misaligned with the true data distribution.
+
+This cross-domain evaluation demonstrates a fundamental principle of machine learning. Models learn the specific distribution of their training data and do not inherently generalise to out-of-distribution examples. The dramatic performance gap ($6.4054$ vs. $0.3501$, a factor of $18.3\times$) illustrates that language models are not learning ``general language understanding'' but rather statistical patterns specific to their training corpus.
+
+This pipeline has practical applications in domain-specific language modeling, where training on narrow domains yields highly effective models with modest computational resources. 
+
+In conclusion, the test set evaluations validate the model's effectiveness within its training distribution while highlighting that learning is inherently domain-specific. The $18.3\times$ performance degradation on Shakespeare highlights the importance of training data selection and domain alignment between training and deployment contexts.

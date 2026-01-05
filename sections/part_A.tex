@@ -3,46 +3,124 @@
 
 Three datasets were provided for this assignment.
 
-The first two $input\_childSpeech\_trainingSet.txt$ and $input\_childSpeech\_testSet.txt$ act as a training and test set respectively. Both of these datasets imitate how a child would speak, containing child-like sentences such as "I see bird" or "More bubbles". These datasets have an extremely small vocab size of 88. With such small vocab size, we can expect these datasets to be relatively easy for our model to learn. The training and test set have lengths of 55076 and 5347 respectively.
+The first two $input\_childSpeech\_trainingSet.txt$ and $input\_childSpeech\_testSet.txt$ act as a training and test set respectively. Both of these datasets imitate how a child would speak, containing child-like sentences such as "I see bird" or "More bubbles". These datasets have an extremely small vocab size of 40. Note, as the provided model tokenises at the character level, this vocab size refers to the number of unique characters in the dataset. With such small vocab sizes, we can expect these datasets to be relatively easy for our model to learn, but this may also lead to severe overfitting. The training and test set have lengths of 55076 and 5347 respectively, so roughly a 10:1 split.
 
-The final dataset $input\_shakespeare.txt$ contains the script to Shakespeare's iconic plays, and thus is by far the most complex, both in terms of length and vocabulary size. This test set has a length of 202651, and a vocab size of 25670, thus we expect poor performance on this test set. Additionally, the text is formatted with speaker names, adding to the complexity of the dataset.
+The final dataset $input\_shakespeare.txt$ contains the script to Shakespeare's iconic plays, and thus is by far the most complex, both in terms of length and vocabulary size. This test set has a length of 202651, and a vocab size of 65, thus we can expect poor performance on this test set. Additionally, the text is formatted with speaker names and old Shakespearean English, adding to the complexity of the dataset.
 
 \subsection{b) Downsize the model and provide rationale}
 
-An overly complicated model can lead to overfitting, especially with vocab sizes as small as those seen in the child speech datasets. Thus, the model has been downsized with the following hyperparameter changes:
+An overly complicated model can lead to overfitting, especially with vocab sizes as small as the child speech datasets. Thus, the model has been downsized with the following hyperparameter changes:
 
 \begin{itemize}
     \setlength{\itemsep}{0pt}
-    \item \textbf{Embedding Size: 256 $\rightarrow$ 64}: The embedding size parameter represents the size of the vector used to represent each token, in this case: a character. A larger embedding size allows the model to create richer, higher dimensional representations of each token. However it significantly increases the number of parameters, and with our very simple datasets, this parameter can be reduced without large expected performance loss.
-    \item \textbf{Number of Heads: 6 $\rightarrow$ 4}: In the Multi-Head Attention mechanism, the embedding dimension is split into several smaller "heads." Each head learns to attend to different parts of the input text simultaneously. For example, one head might focus on grammatical relationships (like subject-verb agreement), while another focuses on semantic context (like pronouns referring to earlier nouns). With fewer heads, the model has fewer independent "perspectives" to look at the data, but again, with our simple datasets, reducing the parameter slightly shouldn't result in a major loss of performance.
-    \item \textbf{Number of Layers: 6 $\rightarrow$ 4}: This parameter determines how many transformer blocks are chained together, ie: the depth of the model. More layers allow the model to learn more hierarchical and abstract features. This parameter was reduced, as it is likely for early layers to detect the simple child speech patterns. 
+    \item \textbf{Embedding Size: 256 $\rightarrow$ 128}: The embedding size parameter represents the size of the vector used to represent each token, in this case: a character. A larger embedding size allows the model to create richer, higher dimensional representations of each token, however it significantly increases the number of parameters. Since our datasets contains very simple character-level patterns, such a high dimensional embedding space is unnecessary. A 128-dimensional vector is more than sufficient to represent the basic English present in child speech. This change greatly reduces the number of model parameters while not expecting to significantly harm the model's performance.
+    
+    \item \textbf{Number of Heads: 6 $\rightarrow$ 4}: In the Multi-Head Attention mechanism, the embedding dimension is split into several smaller "heads." Each head learns to attend to different parts of the input text simultaneously. For example, one head might focus on grammatical relationships (like subject-verb relations), while another focuses on semantic context (like pronouns referring to earlier nouns). With fewer heads, the model has fewer independent "perspectives" to look at the data. Our datasets have very little complex structures that would benefit from high numbers of attention heads, thus reducing this parameter saves on computational complexity without significantly impacting performance in theory.
+
+    \item \textbf{Number of Layers: 6 $\rightarrow$ 4}: This parameter determines how many transformer blocks are chained together, ie: the depth of the model. More layers allow the model to learn more hierarchical and abstract features. Our child speech datasets consists of short sentences with repetitive structure, meaning the model does not require many layers to extract the limited hierarchical information. Reducing the depth therefore decreases computational complexity while still allowing the model to learn the essential sequence patterns.
+    
 \end{itemize}
 
-Note the number of iterations was also reduced from 5000 to 1000 to lower the training time.
+Note the number of iterations was also reduced from 5000 to 1000 to speed up the training process.
 
-\newpage
-\subsection{c) Attempt another two ways of downsizing. Discuss.}
+\subsection{c) Attempt another two ways of downsizing. Report \& Discuss.}
 
 Two additional downsizing strategies were implemented: reducing the Feed-Forward (FF) factor and enabling weight tying. Both approaches reduce parameters in different parts of the transformer architecture. 
 
-\subsection{Feed Forward Factor}
+\subsubsection{Feed Forward Factor}
 
-A feed forward class was provided in the original code, which projects the embedding to a higher dimensional space, applies a ReLu function, and then projects it back to the original embedding size. The size/width of the hidden layer in this feed forward network is determined by the feed forward factor hyperparameter ($FF_FACTOR$). This 
+A feed forward class was provided in the original code, which projects the embedding to a higher dimensional space, applies a ReLu function, and then projects it back to the original embedding size. The width of this internal hidden layer is determined by the feed forward factor hyperparameter ($FF\_FACTOR$). This factor was reduced from 4 to 2, halving the size of this internal layer, and thus reducing the number of parameters in both projection layers. Given the simplicity of the child speech datasets, this reduction is unlikely to significantly affect performance while effectively decreasing model size and training time.
 
-First, the feed forward factor was reduced from 4 to 2. This reduces the size of the feed forward layers in the transformer blocks, thus reducing the number of parameters in the model. 
+\subsubsection{Weight Tying}
 
-Second, weight tying was implemented. This shares the weights between the embedding and output layers, thus reducing the number of parameters in the model.
+Weight tying forces the model to use the exact same weights for the input embedding layer and the final output layer. This reduces the total number of parameters in the model, as the vocab size matrix is stored only once instead of twice. Additionally, weight tying acts as a regulariser, ensuring that the vector representation used to understand a token (input) is semantically similar to the vector used to predict that token (output). The benefits of this approach would be far more pronounced in larger vocab sizes, however it still provides a small reduction in parameters in our case. 
 
-\subsection{Weight Tying}
 
-Weight tying forces the model to use the exact same weights for the input embedding layer and the final output layer. This reduces the total number of parameters in the model, as the vocab size matrix is stored only once instead of twice. Additionally, weight tying acts as a regulariser, ensuring that the vector representation used to understand a token (input) is semantically similar to the vector used to predict that token (output). The benefits of this approach would be far more pronounced in larger vocab sizes, however it still provides a small reduction in parameters in our case.
+\subsubsection{Results \& Discussion}
 
+\begin{table}[h]
+\centering
+\begin{tabular}{lcccc}
+\hline
+\textbf{Downsizing Method} & \textbf{Parameter Count} & \textbf{Final Train Loss} & \textbf{Final Val Loss} \\
+\hline
+Hyperparameter & $0.8364$ M & $0.3401$ & $0.3420$ \\
+FF factor              & $0.5732$ M & $0.3392$ & $0.3423$ \\
+Weight tying             & $0.8313$ M & $0.3423$ & $0.3445$ \\
+\hline
+\end{tabular}
+\caption{Final training and validation losses for the three configs.}
+\end{table}
+
+Across the three downsizing configurations, the losses remain extremely close, showing none of the models exhibit significant overfitting. The results also prove our expectations of minimal loss in performance from the downsizing methods. 
+
+The basic hyperparameter downsizing method configuration achieves the lowest validation loss ($0.3420$), but with the highest parameter count. The reduction in the $FF\_FACTOR$ from 4 to 2 results in a very similar loss ($0.3423$), but with an impressive $31\%$ less parameters. Weight tying leads to a slightly higher validation loss ($0.3445$) with a marginally smaller parameter count. This shows that weight-tying isn't particularly beneficial with such small vocab sizes.
+
+Qualitatively, all three models generate short child-like phrases with simple structure. 
+
+The hyperparameter downsized model produces mostly coherent child-speech phrases, but with occasional misspellings or repeated letters, suggesting room for improvement. Interestingly, the $FF\_FACTOR$ model generates outputs that are very similar in structure but generally cleaner, with fewer mispelled words and more consistent sentence patterns, indicating that reducing FF capacity did not harm performance.
+The weight-tying model shows slightly more repetitions and strange spelling errors, though it still maintains the overall child-speech style.
+
+The results confirm the dataset is so simple that changes to model capacity have only a negligible effect on performance. Among the two additional downsizing approaches, reducing the FF factor is the more effective: it preserves validation performance while reducing parameters significantly, whereas weight tying slightly degrades generalisation on this dataset with little benefit.
 
 
 \subsection{d) Explore and describe the impact of including the bias term}
 
+In neural networks, a linear layer performs the operation $y = x W^T + b $, where b acts as an intercept/bias. These bias terms allow the model to shift activations independently of the input, which can increase flexibility. Without a bias, every linear transformation must pass through the origin which can limit the model's ability to represent patterns with consistent offsets. Removing biases reduces the parameter count, but in our case, this reduction is minimal due the small size of the model. This is shown in the table below.
 
+\begin{table}[h]
+\centering
+\begin{tabular}{lcccc}
+\hline
+\textbf{Configuration} & \textbf{Parameter Count} & \textbf{Final Train Loss} & \textbf{Final Val Loss} \\
+\hline
+With Bias & $0.8364$ M & $0.3401$ & $0.3420$ \\
+Without Bias & $0.8349$ M & $0.3389$ & $0.3412$ \\
+\hline
+\end{tabular}
+\caption{Comparison of bias configurations.}
+\end{table}
 
+The results demonstrate that removing bias terms from the attention layers yields virtually identical performance to the baseline configuration. The no-bias model achieved a final validation loss of $0.3412$ compared to $0.3420$ for the bias-enabled model, representing a difference of approximately $0.23\%$. 
+
+Qualitative evaluation of the generated text reveals no meaningful differences in output quality between configurations. Both models successfully capture characteristic patterns of child speech. 
 
 
 \subsection{e) Explore and describe the impact of including skip connections}
+
+
+Skip connections, first introduced in ResNet, address the degradation problem in deep networks by allowing gradients to flow directly through the network. In a transformer block, skip connections take the form $x = x + \text{SubLayer}(x)$, where the output of each sublayer (self-attention or feed-forward) is added to its input. This architectural feature serves multiple purposes: it mitigates the vanishing gradient problem during backpropagation, enables the training of deeper networks, and allows each layer to learn residual refinements rather than complete transformations.
+
+In the provided implementation, there are two skip connections per transformer block. These skip connections were disabled to explore their impact.
+
+Theoretically, removing skip connections should severely impair learning. Gradients must flow through the full depth of the network, making optimisation substantially more difficult. Additionally, each layer must learn to preserve and transform information simultaneously, rather than focusing on learning residual corrections to the input.
+
+\subsubsection{Results and Discussion}
+
+Table~\ref{tab:skip_comparison} presents the results of training the model with and without skip connections under otherwise identical conditions.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcccc}
+\hline
+\textbf{Configuration} & \textbf{Parameter Count} & \textbf{Final Train Loss} & \textbf{Final Val Loss} \\
+\hline
+With Skip Connections & $0.8364$ M & $0.3401$ & $0.3420$ \\
+Without Skip Connections & $0.8364$ M & $3.1273$ & $3.1303$ \\
+\hline
+\end{tabular}
+\caption{Comparison of skip connection configurations.}
+\label{tab:skip_comparison}
+\end{table}
+
+The results reveal a catastrophic failure of the model without skip connections. While the baseline model with residual connections converged to a validation loss of $0.3420$, the no-skip configuration plateaued at $3.1303$, representing a $815\%$ increase in loss. This dramatic performance degradation demonstrates the critical importance of skip connections for this architecture.
+
+Qualitative examination of the generated text confirms the model's failure to learn coherent language patterns. The output consists almost entirely of random character sequences with no recognisable words or grammatical structure:
+
+\begin{verbatim}
+ymaetImtulldi onagI
+ooHisp  ksie yl bfI oadn
+o S a faIuBri stea urItlbLekdi    nt aM olp
+\end{verbatim}
+
+These results provide strong validation of the importance of skip connections. The $815\%$ increase in validation loss and the complete breakdown of child speech generation demonstrate that residual connections are a critical architectural component. 

@@ -1,0 +1,25 @@
+Week 9
+
+i(a)                                                                                                                                                                                                                                                                         
+Correctly load and use the new dataset Briefly describe the dataset (e.g., what does it appear to contain? What is the vocabulary size? What is the length?). Do the same for the other two datasets in the folder.
+
+i(b)
+Successfully downsize below 1 million parameters. Propose and motivate a reasonable downsizing strategy. Its crucial that some reasoning is carried out to decide which parameters to downsize.                                                                      
+
+i(c)
+Link the previous observations in i(b) with the numerical results. Are the results as expected? What choice appears to be most effective? Mention whether the model is overfitting (e.g., by considering both train and validation loss). and carry out a qualitative assessment of the generated output. Two different ways of downsizing must be provided.
+
+
+i(d)                                                                                                                          Explore and describe in the report how the inclusion of the bias terms in the self-attention layers impacts the transformer model. Penalise responses that are only general, and reward general statements that are then connected with the specific implementation in this exercise. Note that the response should include both a general description of what the bias terms do, why using them or not in general, and considerations on this specific case/architecture
+
+
+1(e)
+Same as i(e) but for skip connections.                                                                                                                                                                                                                              
+
+
+ii(a)
+Select the best model from part (i) Calculate the test loss on input_childSpeech_testSet.txt. (this is an unseen portion of the data, not used in pert(i)) Report it and comment on it. Is it good, bad? Why? It will be crucial to use a baseline of some kind (e.g. dummy model).
+
+
+ii(b)
+Same as for i(a), but on a dataset with a register that is inconsistent with childSpeech (a model fit on child speech is being tested on text from Shakespeare) The evaluation should be much worse than for ii(a). Explanations should be provided.                     0-5
