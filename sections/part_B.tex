@@ -1,57 +1,42 @@
-\section{ii) Evaluate the model}
+\section{Part 2: Boolean GPT }
 
-\subsection{a) Select best model and calculate test loss on child speech dataset. Discuss}
+\subsection{2.1: Build an appropriate dataset}
+Similar to the math model, the Boolean GPT model's dataset was generated deterministically via a python script. This script creates unique boolean expressions and their respective solutions, ensuring ground truth labels are completely accurate. The dataset includes boolean logical operations such as AND, OR, NOT, and XOR, with two levels of complexity selected via the `--basic` and `--advanced` flags. Similar to before, the basic dataset was just used to confirm the model and evaluation scripts were functional, while the advanced dataset was used for final evaluation.
 
-The best-performing model from Part (i) was chosen to be the hyperparameter configuration with bias and skip connections enabled as it had the best empircal results. This model was evaluated on the held-out child speech test set \texttt{input\_childSpeech\_testSet.txt}. Table~\ref{tab:test_results} shows the results compared to a uniform baseline model. The baseline model chosen simply assigns equal probability to all characters in the vocabulary.
+\subsubsection{Issues with dataset}
+Due to the nature of Boolean logic, the number of unique expressions is much smaller than in the previous math arithmetic. There are only two operands, True and False, and a limited set of operators (AND, OR, XOR, NOT), which means that all can be exhaustively enumerated with relatively few samples. As a result, the dataset contains only a few hundred unique expressions. 
 
-\begin{table}[h]
-\centering
-\begin{tabular}{lcc}
-\hline
-\textbf{Model} & \textbf{Child Speech Test Loss} & \textbf{Difference from Baseline} \\
-\hline
-Trained Model & $0.3501$ & $-3.3388$ \\
-Uniform Baseline & $3.6889$ & $0.0000$ \\
-\hline
-\end{tabular}
-\caption{Test set performance on child speech data.}
-\label{tab:test_results}
-\end{table}
+Increasing the dataset size would therefore only possible by scaling the complexity of expressions.
 
-The trained model achieved a test loss of $0.3501$, which represents a substantial improvement over the uniform baseline loss of $3.6889$. The difference of $-3.3388$ indicates that the model assigns significantly higher probability to the correct tokens compared to a random predictor, demonstrating effective learning of the underlying data distribution.
+Finally, because the model is character-level, accuracy is sequence-based rather than label-based. The model must generate the exact target string character-by-character after seeing the prompt up to the equals sign, so even a logically correct intention that produces an incorrect sequence (e.g., wrong spelling, extra whitespace, or partial tokens) is treated as incorrect. This is overcome in the following adaptations section.
 
-The test loss ($0.3501$) is remarkably close to the final validation loss ($0.3420$), with a difference of only $0.0081$. This minimal difference indicates that the model generalises well to unseen data, without overfitting to the training or validation sets. The consistency across datasets validates the model's robustness.
+\subsection{2.2: Define appropriate evaluation metrics}
+Unlike math arithmetic, boolean logic has either a True of False output, meaning this task can be treated as a binary classification problem. 
 
-The model's performance is $10.5\times$ better than the uniform baseline. This demonstrates that the model has learned meaningful patterns in child speech rather than memorising training examples. 
+The primary metric is accuracy, defined as the proportion of test expressions for which the model's generated output matches the ground-truth Boolean value. This is the most appropriate headline metric for Boolean logic, as any deviation from the correct value represents a complete logical failure rather than a partial error. Because the output space is binary and unambiguous, exact match accuracy directly measures task success
 
-The low test loss indicates that the model successfully captured the patterns of child speech. The limited vocabulary, repetitive phrases, and simple grammatical structures create a learnable dataset that a relatively small transformer can approximate effectively.
+To gain more detailed insight into model behaviour, operator-wise accuracy is also reported. This metric breaks exact match accuracy down by the dominant logical operator appearing in each expression (AND, OR, XOR, NOT). This analysis is particularly important for Boolean logic, as different operators have fundamentally different properties. In particular, XOR is not linearly separable and is known to be more difficult for simple models to learn. Operator-wise accuracy therefore helps identify whether the model has learned general logical reasoning or is relying on shallow heuristics that work only for certain operators.
 
-\subsection{b) Calculate loss on Shakespeare dataset. Discuss}
+In addition, standard classification metrics derived from the confusion matrix are computed: precision, recall, and F1 score. These metrics complement accuracy by exposing potential biases in the model's predictions. For example, a model that defaults to predicting False on difficult expressions could achieve deceptively high accuracy if the dataset is balanced, but would exhibit poor recall for the True class. Precision, recall, and F1 score make such failure modes explicit and ensure that performance is not being overstated by a single aggregate metric.
 
-The same trained model was evaluated on \texttt{input\_shakespeare.txt}, which represents dramatically more complex english compared to the child speech training data.
+Finally, to provide further granularity to the accuracy metric, operation-wise accuracy was also recorded. This provides the accuracy values for expressions with either one or two operators. 
 
-\begin{table}[h]
-\centering
-\begin{tabular}{lcc}
-\hline
-\textbf{Model} & \textbf{Shakespeare Test Loss} & \textbf{Difference from Baseline} \\
-\hline
-Trained Model & $6.4054$ & $+2.7166$ \\
-Uniform Baseline & $3.6889$ & $0.0000$ \\
-\hline
-\end{tabular}
-\caption{Cross-domain evaluation on Shakespeare text showing performance degradation on out-of-distribution data.}
-\label{tab:shakespeare_results}
-\end{table}
+Together, these metrics provide a rigorous and interpretable evaluation framework for assessing the Boolean GPT model's performance.
 
-The model's performance on Shakespeare is dramatically worse than on child speech, with a test loss of $6.4054$. Interestingly, the model also performed worse than the uniform baseline, with a difference of $+2.7166$. This is quite counterintuitive but could due to multiple factors. 
+\subsection{2.3: Explore adaptations of the model architecture for this application}
 
-There were 25 unique characters present in the Shakespeare text do not appear in the child speech vocabulary. These out of vocabulary words were mapped to index 0 for evaluation purposes. This means that the model is effectively forced to predict a large number of unknown tokens, which it has no learned representation for. The uniform baseline, on the other hand, assigns equal probability to all characters, including those not seen during training.
+talk about dataset and character level output - how to adapt the model to this task
 
-Beyond vocabulary differences, Shakespeare's English uses complex syntax, vocabulary, and rhetorical devices that are entirely absent from child speech. The model was trained for short, simple utterances like ``I want cookie.'' When applied to complex sentences such as ``To be, or not to be, that is the question,'' the model's learned conditional probabilities are fundamentally misaligned with the true data distribution.
+\subsection{2.4: Explore results for a range of arithmetic options}
 
-This cross-domain evaluation demonstrates a fundamental principle of machine learning. Models learn the specific distribution of their training data and do not inherently generalise to out-of-distribution examples. The dramatic performance gap ($6.4054$ vs. $0.3501$, a factor of $18.3\times$) illustrates that language models are not learning ``general language understanding'' but rather statistical patterns specific to their training corpus.
+This section evaluates the Boolean GPT model’s ability to learn and apply different logical operators, using quantitative results and representative examples. Evaluation on 49 unseen test expressions yields an overall exact match accuracy of 75.51\%, with a validity rate of 100\%, indicating that the model consistently generates well-formed Boolean outputs despite operating at the character level.
 
-This pipeline has practical applications in domain-specific language modeling, where training on narrow domains yields highly effective models with modest computational resources. 
+Operator-wise results show clear variation in difficulty. OR is learned perfectly, achieving 100\% accuracy, with expressions such as 1 | 0=1 and (0 | 0) | 0=0 always evaluated correctly. This reflects the simplicity and monotonic structure of OR, which is easy for the model to capture even in chained expressions. AND also performs well, with an accuracy of 76.92\%, and is generally correct in cases like 1 \& 0 \& 0=0. Errors typically arise when AND is combined with other operators, indicating challenges with composition rather than misunderstanding AND itself.
 
-In conclusion, the test set evaluations validate the model's effectiveness within its training distribution while highlighting that learning is inherently domain-specific. The $18.3\times$ performance degradation on Shakespeare highlights the importance of training data selection and domain alignment between training and deployment contexts.
+NOT is also solved perfectly in this evaluation, but it is under-represented, appearing in only a single test case. While simple negation such as ! 0=1 is handled correctly, this result should be interpreted cautiously due to the small sample size.
+
+XOR is the weakest operator, with an accuracy of 68.97\%. Many errors involve chained or nested XOR expressions, such as $1 \text{\textasciicircum} 1 \text{\textasciicircum} 1$ or $0 \text{\textasciicircum} (1 \text{\textasciicircum} 0)$, reflecting the non-linearly separable nature of XOR and the need to track parity across operands. This makes XOR substantially harder than AND or OR for the model.
+
+Expression complexity further explains these results. All single-operator expressions are solved correctly, while accuracy drops to 73.33\% for expressions containing two operators. This indicates that the main failure mode is compositional reasoning, particularly when multiple operators interact.
+
+The character error rate of 0.2449 reflects incorrect final truth values rather than malformed outputs, as Boolean outputs are short. Precision, recall, and F1 score are all 0.7391, indicating balanced performance across True and False classes. Overall, the model reliably learns simple Boolean operators, but struggles with XOR and with deeper compositional structure, highlighting the limits of character-level reasoning for non-linear logical operations.

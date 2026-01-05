@@ -1,126 +1,63 @@
-\section{i) }
-\subsection{a) Describe the provided datasets}
+\section{Part 1: Math GPT }
 
-Three datasets were provided for this assignment.
+\subsection{1.1: Build an appropriate dataset}
+ Designing an appropriate dataset is crucial for the performance of the Math GPT model. The dataset was generated via a python script that deterministically creates unique arithmetic problems and their respective solutions. This ensures all ground truth labels are completely accurate. The dataset includes a variety of operations such as addition, subtraction, multiplication, and division, with two levels of complexity selected via the `--basic` and `--advanced` flags.
 
-The first two $input\_childSpeech\_trainingSet.txt$ and $input\_childSpeech\_testSet.txt$ act as a training and test set respectively. Both of these datasets imitate how a child would speak, containing child-like sentences such as "I see bird" or "More bubbles". These datasets have an extremely small vocab size of 40. Note, as the provided model tokenises at the character level, this vocab size refers to the number of unique characters in the dataset. With such small vocab sizes, we can expect these datasets to be relatively easy for our model to learn, but this may also lead to severe overfitting. The training and test set have lengths of 55076 and 5347 respectively, so roughly a 10:1 split.
+ \subsubsection{Basic Expressions}
+ The --basic flag generates expressions involving single-digit operands and simple operator combinations. 
+ This mode was used during early experimentation to validate that the transformer model, tokenisation method, and evaluation scripts were all functioning as expected.
 
-The final dataset $input\_shakespeare.txt$ contains the script to Shakespeare's iconic plays, and thus is by far the most complex, both in terms of length and vocabulary size. This test set has a length of 202651, and a vocab size of 65, thus we can expect poor performance on this test set. Additionally, the text is formatted with speaker names and old Shakespearean English, adding to the complexity of the dataset.
-
-\subsection{b) Downsize the model and provide rationale}
-
-An overly complicated model can lead to overfitting, especially with vocab sizes as small as the child speech datasets. Thus, the model has been downsized with the following hyperparameter changes:
-
-\begin{itemize}
-    \setlength{\itemsep}{0pt}
-    \item \textbf{Embedding Size: 256 $\rightarrow$ 128}: The embedding size parameter represents the size of the vector used to represent each token, in this case: a character. A larger embedding size allows the model to create richer, higher dimensional representations of each token, however it significantly increases the number of parameters. Since our datasets contains very simple character-level patterns, such a high dimensional embedding space is unnecessary. A 128-dimensional vector is more than sufficient to represent the basic English present in child speech. This change greatly reduces the number of model parameters while not expecting to significantly harm the model's performance.
-    
-    \item \textbf{Number of Heads: 6 $\rightarrow$ 4}: In the Multi-Head Attention mechanism, the embedding dimension is split into several smaller "heads." Each head learns to attend to different parts of the input text simultaneously. For example, one head might focus on grammatical relationships (like subject-verb relations), while another focuses on semantic context (like pronouns referring to earlier nouns). With fewer heads, the model has fewer independent "perspectives" to look at the data. Our datasets have very little complex structures that would benefit from high numbers of attention heads, thus reducing this parameter saves on computational complexity without significantly impacting performance in theory.
-
-    \item \textbf{Number of Layers: 6 $\rightarrow$ 4}: This parameter determines how many transformer blocks are chained together, ie: the depth of the model. More layers allow the model to learn more hierarchical and abstract features. Our child speech datasets consists of short sentences with repetitive structure, meaning the model does not require many layers to extract the limited hierarchical information. Reducing the depth therefore decreases computational complexity while still allowing the model to learn the essential sequence patterns.
-    
-\end{itemize}
-
-Note the number of iterations was also reduced from 5000 to 1000 to speed up the training process.
-
-\subsection{c) Attempt another two ways of downsizing. Report \& Discuss.}
-
-Two additional downsizing strategies were implemented: reducing the Feed-Forward (FF) factor and enabling weight tying. Both approaches reduce parameters in different parts of the transformer architecture. 
-
-\subsubsection{Feed Forward Factor}
-
-A feed forward class was provided in the original code, which projects the embedding to a higher dimensional space, applies a ReLu function, and then projects it back to the original embedding size. The width of this internal hidden layer is determined by the feed forward factor hyperparameter ($FF\_FACTOR$). This factor was reduced from 4 to 2, halving the size of this internal layer, and thus reducing the number of parameters in both projection layers. Given the simplicity of the child speech datasets, this reduction is unlikely to significantly affect performance while effectively decreasing model size and training time.
-
-\subsubsection{Weight Tying}
-
-Weight tying forces the model to use the exact same weights for the input embedding layer and the final output layer. This reduces the total number of parameters in the model, as the vocab size matrix is stored only once instead of twice. Additionally, weight tying acts as a regulariser, ensuring that the vector representation used to understand a token (input) is semantically similar to the vector used to predict that token (output). The benefits of this approach would be far more pronounced in larger vocab sizes, however it still provides a small reduction in parameters in our case. 
-
-
-\subsubsection{Results \& Discussion}
+ \subsubsection{Advanced Expressions}
+ The --advanced flag extends this setup to more challenging two-digit arithmetic, including larger operand ranges and higher-magnitude outputs. This mode is intended to test the model's ability to generalise to more complex mathematical tasks, and is used for final evaluation.
 
 \begin{table}[h]
 \centering
-\begin{tabular}{lcccc}
+\begin{tabular}{|l|l|}
 \hline
-\textbf{Downsizing Method} & \textbf{Parameter Count} & \textbf{Final Train Loss} & \textbf{Final Val Loss} \\
+\textbf{Basic examples} & \textbf{Advanced examples} \\
 \hline
-Hyperparameter & $0.8364$ M & $0.3401$ & $0.3420$ \\
-FF factor              & $0.5732$ M & $0.3392$ & $0.3423$ \\
-Weight tying             & $0.8313$ M & $0.3423$ & $0.3445$ \\
-\hline
-\end{tabular}
-\caption{Final training and validation losses for the three configs.}
-\end{table}
-
-Across the three downsizing configurations, the losses remain extremely close, showing none of the models exhibit significant overfitting. The results also prove our expectations of minimal loss in performance from the downsizing methods. 
-
-The basic hyperparameter downsizing method configuration achieves the lowest validation loss ($0.3420$), but with the highest parameter count. The reduction in the $FF\_FACTOR$ from 4 to 2 results in a very similar loss ($0.3423$), but with an impressive $31\%$ less parameters. Weight tying leads to a slightly higher validation loss ($0.3445$) with a marginally smaller parameter count. This shows that weight-tying isn't particularly beneficial with such small vocab sizes.
-
-Qualitatively, all three models generate short child-like phrases with simple structure. 
-
-The hyperparameter downsized model produces mostly coherent child-speech phrases, but with occasional misspellings or repeated letters, suggesting room for improvement. Interestingly, the $FF\_FACTOR$ model generates outputs that are very similar in structure but generally cleaner, with fewer mispelled words and more consistent sentence patterns, indicating that reducing FF capacity did not harm performance.
-The weight-tying model shows slightly more repetitions and strange spelling errors, though it still maintains the overall child-speech style.
-
-The results confirm the dataset is so simple that changes to model capacity have only a negligible effect on performance. Among the two additional downsizing approaches, reducing the FF factor is the more effective: it preserves validation performance while reducing parameters significantly, whereas weight tying slightly degrades generalisation on this dataset with little benefit.
-
-
-\subsection{d) Explore and describe the impact of including the bias term}
-
-In neural networks, a linear layer performs the operation $y = x W^T + b $, where b acts as an intercept/bias. These bias terms allow the model to shift activations independently of the input, which can increase flexibility. Without a bias, every linear transformation must pass through the origin which can limit the model's ability to represent patterns with consistent offsets. Removing biases reduces the parameter count, but in our case, this reduction is minimal due the small size of the model. This is shown in the table below.
-
-\begin{table}[h]
-\centering
-\begin{tabular}{lcccc}
-\hline
-\textbf{Configuration} & \textbf{Parameter Count} & \textbf{Final Train Loss} & \textbf{Final Val Loss} \\
-\hline
-With Bias & $0.8364$ M & $0.3401$ & $0.3420$ \\
-Without Bias & $0.8349$ M & $0.3389$ & $0.3412$ \\
+$16 \times 31 = 496$   & $52 \times 40 + 2 = 2082$ \\
+$77 - 50 = 27$        & $5 - 9 \times 3 = -22$ \\
+$98 + 44 = 142$       & $(1 \times 1) + 1 = 2$ \\
+$43 + 98 = 141$       & $4 + (9 \times 2) = 22$ \\
+$93 - 48 = 45$        & $65 + (4 \times 26) = 169$ \\
 \hline
 \end{tabular}
-\caption{Comparison of bias configurations.}
+\caption{Example outputs for basic and advanced mathematical datasets}
 \end{table}
 
-The results demonstrate that removing bias terms from the attention layers yields virtually identical performance to the baseline configuration. The no-bias model achieved a final validation loss of $0.3412$ compared to $0.3420$ for the bias-enabled model, representing a difference of approximately $0.23\%$. 
-
-Qualitative evaluation of the generated text reveals no meaningful differences in output quality between configurations. Both models successfully capture characteristic patterns of child speech. 
+The dataset is then split into training and test sets using holdout validation. This ensures that evaluation is performed on unseen expressions, and provides a fair and reliable measure of model performance. Note, one pitfall of this design is that the division expression is under-represented. This is due to generating integer-only results, which significantly reduces the number of valid division expressions that can be generated. This constraint was added to avoid decimal results, which would add sinificant and disproportionate complexity to the division operation.
 
 
-\subsection{e) Explore and describe the impact of including skip connections}
+\subsection{1.2: Define appropriate evaluation metrics}
+To evaluate the performance of the Math GPT model, multiple metrics were recorded to capture different aspects of the model's performance. The primary metric used was accuracy, defined as the percentage of correctly predicted expressions in the test set. This is the most task-appropriate metric, as the goal is to have the model produce exact matches to the ground truth solutions.
+
+To provide further granulaity and localisation to this metric, operation-wise accuracy was also recorded. This breaks down the overall accuracy by arithmetic operation (addition, subtraction, multiplication, division), revealing wheter performance is unifrom across operations, or whether the model finds certain operations more challenging.
+
+The Character Error Rate (CER) was implemented retrospectively as results showed predictions were often off by just one or two digits. This metric captures how many single-character edits are required to transform the model output into the correct answer, meaning: CER focuses on near-miss errors, such as predicting 1025 instead of 1024, as opposed to complete hallucinations. 
+
+Finally, the Mean Absolute Error (MAE) measures the average absolute difference between the predicted and true numeric values. This provides insight to how far incorrect predictions deviate from the ground truth.
+
+Using the above string and numerical based metrics in conjunction, provides a balanced and reliable evaluation framework for this assignment.
+
+\subsection{1.3: Explore adaptations of the model architecture for this application}
 
 
-Skip connections, first introduced in ResNet, address the degradation problem in deep networks by allowing gradients to flow directly through the network. In a transformer block, skip connections take the form $x = x + \text{SubLayer}(x)$, where the output of each sublayer (self-attention or feed-forward) is added to its input. This architectural feature serves multiple purposes: it mitigates the vanishing gradient problem during backpropagation, enables the training of deeper networks, and allows each layer to learn residual refinements rather than complete transformations.
+\subsection{1.4: Explore results for a range of arithmetic options}
 
-In the provided implementation, there are two skip connections per transformer block. These skip connections were disabled to explore their impact.
+\subsubsection{Addition}
+Addition is the best-learned operation, achieving an accuracy of 83.94\%. This strong performance could be due to the relatively local and regular structure of addition. Multi-digit addition can commonly be decomposed into digit-wise operations with short dependency chains, where carries typically affect only adjacent digits. For example, expressions such as 12+13=25 are frequently solved correctly. However, as the complexity of the addition increases, such as in 98+76=174, the model struggles more, likely due to the longer dependency chains and carry operations involved.
 
-Theoretically, removing skip connections should severely impair learning. Gradients must flow through the full depth of the network, making optimisation substantially more difficult. Additionally, each layer must learn to preserve and transform information simultaneously, rather than focusing on learning residual corrections to the input.
+\subsubsection{Subtraction}
+Subtraction achieves the second-highest accuracy at 77.98\%. This sligthly weaker performance is expected, given the added complexity of borrowing compared to carrying, as well as sign handling for negative results. The model performs well on simpler cases such as 54-20=34, but errors are more common when multiple borrow operations or negative results are involved, for example in expressions like 23-89.
 
-\subsubsection{Results and Discussion}
+\subsection{Division}
+Division achieves an accuracy of 62.26\%, which is notably lower than addition and subtraction but still demonstrates non-trivial learning. As mentioned, division is under-represented in the dataset, with only 53 division examples appearing in the test set, compared to roughly one thousand examples for each of the other operators. Typical correctly solved cases include expressions such as 48/6=8 or 81/9=9. Given the small sample size, this accuracy estimate is noisier and less reliable, and performance would be expected to degrade sharply if non-integer quotients or decimal representations were introduced.
 
-Table~\ref{tab:skip_comparison} presents the results of training the model with and without skip connections under otherwise identical conditions.
+\subsubsection{Multiplication}
+Multiplication is the weakest operation by a large margin, with an accuracy of just 13.51\%. This behaviour is expected and highlights a fundamental limitation of the model. Multi-digit multiplication requires quadratic interactions between digits, meaning every digit in operand A interacts with every digit in operand B. In addition, long dependency chains due to multiple carries, and the generation of comparatively long outputs complicaates this operation significantly. For example, in cases such as 53*71=3763, the model must correctly generate multiple digits in sequence, and a single incorrect carry can corrupt the entire result. Results show, the model often produces outputs that are numerically incorrect but with near-miss predictions that differ by one or two digits. For this reason, the CER metric was used.
 
-\begin{table}[h]
-\centering
-\begin{tabular}{lcccc}
-\hline
-\textbf{Configuration} & \textbf{Parameter Count} & \textbf{Final Train Loss} & \textbf{Final Val Loss} \\
-\hline
-With Skip Connections & $0.8364$ M & $0.3401$ & $0.3420$ \\
-Without Skip Connections & $0.8364$ M & $3.1273$ & $3.1303$ \\
-\hline
-\end{tabular}
-\caption{Comparison of skip connection configurations.}
-\label{tab:skip_comparison}
-\end{table}
+\subsubsection{CER and MAE}
+The character error rate of 0.2290 indicates that, on average, roughly 23\% of characters in the model's predicted answers differ from the ground-truth output. This reflects errors at the character level rather than purely numeric correctness. Multiplication is expected to dominate this metric, as its longer outputs make it especially sensitive to cascading mistakes. This would be the first expansion point for future work, creating more detailed analysis on CER, such as per-operation, and reducing character-level errors to improve overall accuracy.
 
-The results reveal a catastrophic failure of the model without skip connections. While the baseline model with residual connections converged to a validation loss of $0.3420$, the no-skip configuration plateaued at $3.1303$, representing a $815\%$ increase in loss. This dramatic performance degradation demonstrates the critical importance of skip connections for this architecture.
-
-Qualitative examination of the generated text confirms the model's failure to learn coherent language patterns. The output consists almost entirely of random character sequences with no recognisable words or grammatical structure:
-
-\begin{verbatim}
-ymaetImtulldi onagI
-ooHisp  ksie yl bfI oadn
-o S a faIuBri stea urItlbLekdi    nt aM olp
-\end{verbatim}
-
-These results provide strong validation of the importance of skip connections. The $815\%$ increase in validation loss and the complete breakdown of child speech generation demonstrate that residual connections are a critical architectural component. 
+The mean absolute error of 116.94 highlights a similar asymmetry across operations. Errors in addition and subtraction typically produce small numeric deviations, whereas multiplication errors often lead to large numerical discrepancies. A single incorrect digit in a higher place value can result in errors of hundreds or more, causing multiplication to disproportionately inflate MAE despite being only one category of operation.
