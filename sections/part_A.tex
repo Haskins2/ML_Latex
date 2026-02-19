@@ -1,14 +1,14 @@
-\section{Part 1: Math GPT }
+\section{Part 1: Math GPT}
 
 \subsection{1.1: Build an appropriate dataset}
- Designing an appropriate dataset is crucial for the performance of the Math GPT model. The dataset was generated via a python script that deterministically creates unique arithmetic problems and their respective solutions. This ensures all ground truth labels are completely accurate. The dataset includes a variety of operations such as addition, subtraction, multiplication, and division, with two levels of complexity selected via the `--basic` and `--advanced` flags.
+Designing an appropriate dataset is crucial for the performance of the Math GPT model. The dataset was generated via a python script that deterministically creates a series of unique arithmetic problems and their respective solutions. This deterministic approach ensures all ground truth labels are completely truthful. The dataset includes a variety of operations such as addition, subtraction, multiplication, and division, with two levels of complexity selected via the `--basic` and `--advanced` flags.
 
- \subsubsection{Basic Expressions}
- The --basic flag generates expressions involving single-digit operands and simple operator combinations. 
- This mode was used during early experimentation to validate that the transformer model, tokenisation method, and evaluation scripts were all functioning as expected.
+\subsubsection{Basic Expressions}
+The --basic flag generates expressions involving single-digit operands and simple operator combinations. 
+This mode was used during early experimentation to validate that the transformer model, tokenisation method, and evaluation scripts were all functioning as expected.
 
- \subsubsection{Advanced Expressions}
- The --advanced flag extends this setup to more challenging two-digit arithmetic, including larger operand ranges and higher-magnitude outputs. This mode is intended to test the model's ability to generalise to more complex mathematical tasks, and is used for final evaluation.
+\subsubsection{Advanced Expressions}
+The --advanced flag extends this setup to more challenging two-digit arithmetic, including larger operand ranges and higher-magnitude outputs. This mode is intended to test the model's ability to generalise to more complex mathematical tasks, and is used for final evaluation. Both levels of complexity are shown below in Table \ref{tab:examples}
 
 \begin{table}[h]
 \centering
@@ -24,17 +24,21 @@ $93 - 48 = 45$        & $65 + (4 \times 26) = 169$ \\
 \hline
 \end{tabular}
 \caption{Example outputs for basic and advanced mathematical datasets}
+\label{tab:examples}
 \end{table}
 
-The dataset is then split into training and test sets using holdout validation. This ensures that evaluation is performed on unseen expressions, and provides a fair and reliable measure of model performance. Note, one pitfall of this design is that the division expression is under-represented. This is due to generating integer-only results, which significantly reduces the number of valid division expressions that can be generated. This constraint was added to avoid decimal results, which would add sinificant and disproportionate complexity to the division operation.
+The dataset is then split into training and test sets using holdout validation with a 80/20 split. This ensures that evaluation is performed on unseen expressions, and provides a fair and reliable measure of model performance.
+
+\subsubsection{Shortcomings of the Dataset}
+One pitfall of this dataset design is that the division expression is under-represented. This is due to generating integer-only results, which significantly reduces the number of valid division expressions that can be generated. This constraint was added to avoid decimal results, which would add sinificant and disproportionate complexity to the division operation.
 
 
 \subsection{1.2: Define appropriate evaluation metrics}
 To evaluate the performance of the Math GPT model, multiple metrics were recorded to capture different aspects of the model's performance. The primary metric used was accuracy, defined as the percentage of correctly predicted expressions in the test set. This is the most task-appropriate metric, as the goal is to have the model produce exact matches to the ground truth solutions.
 
-To provide further granulaity and localisation to this metric, operation-wise accuracy was also recorded. This breaks down the overall accuracy by arithmetic operation (addition, subtraction, multiplication, division), revealing wheter performance is unifrom across operations, or whether the model finds certain operations more challenging.
+To provide further granulaity to this metric, operation-wise accuracy was also recorded. This breaks down the overall accuracy by arithmetic operation, revealing whether performance is uniform across operations, or whether the model finds certain operations more challenging.
 
-The Character Error Rate (CER) was implemented retrospectively as results showed predictions were often off by just one or two digits. This metric captures how many single-character edits are required to transform the model output into the correct answer, meaning: CER focuses on near-miss errors, such as predicting 1025 instead of 1024, as opposed to complete hallucinations. 
+The Character Error Rate (CER) was implemented retrospectively as results showed predictions were often off by just one or two digits. This metric captures how many single-character edits are required to transform the model output into the correct answer, meaning: CER represents near-miss errors, such as predicting 1025 instead of 1024, as opposed to complete hallucinations. 
 
 Finally, the Mean Absolute Error (MAE) measures the average absolute difference between the predicted and true numeric values. This provides insight to how far incorrect predictions deviate from the ground truth.
 
@@ -42,22 +46,84 @@ Using the above string and numerical based metrics in conjunction, provides a ba
 
 \subsection{1.3: Explore adaptations of the model architecture for this application}
 
+\subsubsection{Model Capacity Reduction}
+
+The initial model configuration had a character-level transformer design, with a block size of 256, an embedding dimension of 384, and 6 transformer layers, resulting in 10.74 million parameters. Arithmetic expressions are short, structured sequences with limited contextual dependency, and therefore do not require long receptive fields or deep hierarchical representations.
+
+Thus, to better align model with task requirements, the architecture was substantially downscaled. The block size was reduced from 256 to 32, the embedding dimension from 384 to 256, and the number of layers from 6 to 4, resulting in a model with approximately 3.15 million parameters. This reduction significantly decreased computational cost, enabling longer training runs and more stable optimisation. 
+
+The impact of this architectural change is evident in the quantitative results in Table \ref{tab:results_downscaled}. The original model was only trained for 1,000 iterations due to time and resource constraints, and exhibited very poor performance, achieving an accuracy of only 3.11\%. Performance was poor across all operators, with particularly weak results on multiplication. The high character error rate (0.7802) further suggests that most predicted sequences were structurally incorrect.
+
+In contrast, the downscaled model was trained for 5,000 iterations and achieved an accuracy of 59.00\%. Substantial improvements were observed across all operators except multiplication, which remained comparatively difficult. The character error rate decreased to 0.2338, indicating that the majority of output sequences were largely correct at the character level. The mean absolute error also decreased by more than 60\%, demonstrating improved numerical accuracy in cases where predictions were not exact.
+
+These results indicate that reducing model capacity was critical for effective learning in this setting. The smaller model not only reduced over-parameterisation, but also allowed sufficient optimisation time to learn arithmetic structure, resulting in large gains in both symbolic and numeric accuracy.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\hline
+\textbf{Metric} & \textbf{Original Model} & \textbf{Downscaled Model} \\
+\hline
+Training Iterations & 1{,}000 & 5{,}000 \\
+Parameters (millions) & 10.74 & 3.15 \\
+Block Size & 256 & 32 \\
+Embedding Dimension & 384 & 256 \\
+Transformer Layers & 6 & 4 \\
+\hline
+Overall Accuracy & 3.11\% & 59.00\% \\
+Addition Accuracy & 5.45\% & 80.47\% \\
+Subtraction Accuracy & 2.88\% & 75.78\% \\
+Multiplication Accuracy & 0.30\% & 10.00\% \\
+Division Accuracy & 16.98\% & 71.93\% \\
+Character Error Rate & 0.7802 & 0.2338 \\
+Mean Absolute Error & 270.45 & 107.94 \\
+\hline
+\end{tabular}
+\caption{Numerical comparison between the original and downscaled model architectures}
+\label{tab:results_downscaled}
+\end{table}
+
+\subsubsection{Early Stopping}
+Although the downscaled model converged effectively, prolonged training revealed clear signs of overfitting. Early in training, both training and validation loss decreased steadily, indicating successful learning of the underlying arithmetic patterns. However, after convergence, training loss continued to decrease marginally while validation loss increased substantially. This divergence indicates that the model began to memorise training examples rather than improving generalisable arithmetic reasoning. This behaviour can be seen in Table \ref{tab:early_stopping} below.
+
+To mitigate this behaviour, early stopping was introduced. Training was halted once validation loss plataeud, preventing further degradation in generalisation performance. This reduced unnecessary computation and and reduced overfitting.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\hline
+\textbf{Training Stage} & \textbf{Training Loss} & \textbf{Validation Loss} \\
+\hline
+Step 0    & 2.8065 & 2.8149 \\
+Step 25   & 1.9796 & 2.0290 \\
+\hline
+Step 1910 & 0.2377 & 3.5586 \\
+Step 1920 & 0.2343 & 3.6422 \\
+Step 1930 & 0.2328 & 3.6369 \\
+\hline
+\end{tabular}
+\caption{Training and validation loss at early and late stages of optimisation.}
+\label{tab:early_stopping}
+\end{table}
+
 
 \subsection{1.4: Explore results for a range of arithmetic options}
 
+Results are shown under the downscaled model in Table \ref{tab:results_downscaled} above. 
+
 \subsubsection{Addition}
-Addition is the best-learned operation, achieving an accuracy of 83.94\%. This strong performance could be due to the relatively local and regular structure of addition. Multi-digit addition can commonly be decomposed into digit-wise operations with short dependency chains, where carries typically affect only adjacent digits. For example, expressions such as 12+13=25 are frequently solved correctly. However, as the complexity of the addition increases, such as in 98+76=174, the model struggles more, likely due to the longer dependency chains and carry operations involved.
+Addition is the best-learned operation, achieving an accuracy of 80.47\%. This strong performance could be due to the relatively local and regular structure of addition. Multi-digit addition can commonly be decomposed into digit-wise operations with short dependency chains, where carries typically affect only adjacent digits. For example, expressions such as 12+13=25 are frequently solved correctly. However, as the complexity of the addition increases, such as in 98+76=174, the model struggles more, likely due to the longer dependency chains and carry operations involved.
 
 \subsubsection{Subtraction}
-Subtraction achieves the second-highest accuracy at 77.98\%. This sligthly weaker performance is expected, given the added complexity of borrowing compared to carrying, as well as sign handling for negative results. The model performs well on simpler cases such as 54-20=34, but errors are more common when multiple borrow operations or negative results are involved, for example in expressions like 23-89.
+Subtraction achieves the second-highest accuracy at 75.78\%. This sligthly weaker performance is expected, given the added complexity of borrowing compared to carrying, as well as sign handling for negative results. The model performs well on simpler cases such as 54-20=34, but errors are more common when multiple borrow operations or negative results are involved, for example in expressions like 23-89.
 
 \subsection{Division}
-Division achieves an accuracy of 62.26\%, which is notably lower than addition and subtraction but still demonstrates non-trivial learning. As mentioned, division is under-represented in the dataset, with only 53 division examples appearing in the test set, compared to roughly one thousand examples for each of the other operators. Typical correctly solved cases include expressions such as 48/6=8 or 81/9=9. Given the small sample size, this accuracy estimate is noisier and less reliable, and performance would be expected to degrade sharply if non-integer quotients or decimal representations were introduced.
+Division achieves an accuracy of 71.93\%, which is lower than addition and subtraction but still demonstrates non-trivial learning. As mentioned, division is under-represented in the dataset, with only 53 division examples appearing in the test set, compared to roughly one thousand examples for each of the other operators. Typical correctly solved cases include expressions such as 48/6=8 or 81/9=9. Given the small sample size, this accuracy estimate is noisier and less reliable, and performance would be expected to degrade significantly if non-integer quotients or decimal representations were introduced.
 
 \subsubsection{Multiplication}
-Multiplication is the weakest operation by a large margin, with an accuracy of just 13.51\%. This behaviour is expected and highlights a fundamental limitation of the model. Multi-digit multiplication requires quadratic interactions between digits, meaning every digit in operand A interacts with every digit in operand B. In addition, long dependency chains due to multiple carries, and the generation of comparatively long outputs complicaates this operation significantly. For example, in cases such as 53*71=3763, the model must correctly generate multiple digits in sequence, and a single incorrect carry can corrupt the entire result. Results show, the model often produces outputs that are numerically incorrect but with near-miss predictions that differ by one or two digits. For this reason, the CER metric was used.
+Multiplication is the weakest operation by a large margin, with an accuracy of just 10.00\%. This behaviour is expected and highlights a limitation of the model. Multi-digit multiplication requires quadratic interactions between digits, ie: every digit in operand A interacts with every digit in operand B. As well as this, long dependency chains due to multiple carries, and the generation of comparatively long outputs complicaates the multiplication operation significantly. For example, in the case 53*71=3763, the model must correctly generate all four digits in the sequence, and a single incorrect carry can corrupt the entire result. Results show, the model often produces outputs that are numerically incorrect but with near-miss predictions that differ by one or two digits. For this reason, the CER metric was used.
 
 \subsubsection{CER and MAE}
-The character error rate of 0.2290 indicates that, on average, roughly 23\% of characters in the model's predicted answers differ from the ground-truth output. This reflects errors at the character level rather than purely numeric correctness. Multiplication is expected to dominate this metric, as its longer outputs make it especially sensitive to cascading mistakes. This would be the first expansion point for future work, creating more detailed analysis on CER, such as per-operation, and reducing character-level errors to improve overall accuracy.
+The character error rate of 0.2290 indicates that, on average, roughly 23\% of characters in the model's predicted answers differ from the ground-truth output. This reflects errors at the character level rather than purely numeric correctness. Multiplication is expected to dominate this metric, as its longer outputs make it especially sensitive to cascading mistakes. Creating a more detailed analysis on CER, such as per-operation, and reducing character-level errors to improve overall accuracy would be the first point of future work.
 
 The mean absolute error of 116.94 highlights a similar asymmetry across operations. Errors in addition and subtraction typically produce small numeric deviations, whereas multiplication errors often lead to large numerical discrepancies. A single incorrect digit in a higher place value can result in errors of hundreds or more, causing multiplication to disproportionately inflate MAE despite being only one category of operation.

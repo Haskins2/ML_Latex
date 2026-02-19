@@ -4,39 +4,110 @@
 Similar to the math model, the Boolean GPT model's dataset was generated deterministically via a python script. This script creates unique boolean expressions and their respective solutions, ensuring ground truth labels are completely accurate. The dataset includes boolean logical operations such as AND, OR, NOT, and XOR, with two levels of complexity selected via the `--basic` and `--advanced` flags. Similar to before, the basic dataset was just used to confirm the model and evaluation scripts were functional, while the advanced dataset was used for final evaluation.
 
 \subsubsection{Issues with dataset}
-Due to the nature of Boolean logic, the number of unique expressions is much smaller than in the previous math arithmetic. There are only two operands, True and False, and a limited set of operators (AND, OR, XOR, NOT), which means that all can be exhaustively enumerated with relatively few samples. As a result, the dataset contains only a few hundred unique expressions. 
+Due to the nature of Boolean logic, the number of unique expressions is much far than in the previous math dataset. This is due to the nature of Boolean logic: There are only two operands, True and False, and a limited set of operators (AND, OR, XOR, NOT), meaning that all possible expressions can be exhaustively enumerated with relatively few samples. As a result, the dataset contains only a few hundred unique expressions. Increasing the dataset size would only possible by scaling the complexity of expressions to a much greater degree.  
 
-Increasing the dataset size would therefore only possible by scaling the complexity of expressions.
-
-Finally, because the model is character-level, accuracy is sequence-based rather than label-based. The model must generate the exact target string character-by-character after seeing the prompt up to the equals sign, so even a logically correct intention that produces an incorrect sequence (e.g., wrong spelling, extra whitespace, or partial tokens) is treated as incorrect. This is overcome in the following adaptations section.
+Finally, because the model is character-level, accuracy is sequence-based rather than label-based. The model must generate the exact target string character-by-character, so even a logically correct intention that produces an incorrect sequence (e.g., wrong spelling, extra whitespace, or partial tokens) is treated as incorrect. This issue is accounted for in the upcoming architectural adaptations section.
 
 \subsection{2.2: Define appropriate evaluation metrics}
 Unlike math arithmetic, boolean logic has either a True of False output, meaning this task can be treated as a binary classification problem. 
 
-The primary metric is accuracy, defined as the proportion of test expressions for which the model's generated output matches the ground-truth Boolean value. This is the most appropriate headline metric for Boolean logic, as any deviation from the correct value represents a complete logical failure rather than a partial error. Because the output space is binary and unambiguous, exact match accuracy directly measures task success
+The primary metric is accuracy, defined as the proportion of test expressions for which the model's generated output matches the ground-truth Boolean value. This is the most appropriate headline metric for Boolean logic, as any deviation from the correct value represents a complete logical failure rather than a partial error. Because the output space is binary and unambiguous, accuracy directly measures task success
 
-To gain more detailed insight into model behaviour, operator-wise accuracy is also reported. This metric breaks exact match accuracy down by the dominant logical operator appearing in each expression (AND, OR, XOR, NOT). This analysis is particularly important for Boolean logic, as different operators have fundamentally different properties. In particular, XOR is not linearly separable and is known to be more difficult for simple models to learn. Operator-wise accuracy therefore helps identify whether the model has learned general logical reasoning or is relying on shallow heuristics that work only for certain operators.
+To gain more detailed insight into model behaviour, operator-wise accuracy is also reported. This metric breaks accuracy down by the logical operator appearing in each expression (AND, OR, XOR, NOT). This analysis is particularly important for Boolean logic, as different operators have fundamentally different properties. Operator-wise accuracy helps identify whether the model has learned general logical reasoning or is relying on basic shortcuts that work only for certain operators.
 
-In addition, standard classification metrics derived from the confusion matrix are computed: precision, recall, and F1 score. These metrics complement accuracy by exposing potential biases in the model's predictions. For example, a model that defaults to predicting False on difficult expressions could achieve deceptively high accuracy if the dataset is balanced, but would exhibit poor recall for the True class. Precision, recall, and F1 score make such failure modes explicit and ensure that performance is not being overstated by a single aggregate metric.
+In addition, standard classification metrics derived from the confusion matrix were computed: precision, recall, and F1 score. These metrics complement accuracy by exposing potential biases in the model's predictions. For example, a model that defaults to predicting False on difficult expressions could achieve deceptively high accuracy if the dataset is balanced, but would exhibit poor recall for the True class. Precision, recall, and F1 score make such failure modes explicit and ensure that performance is not being overstated by a single metric.
 
-Finally, to provide further granularity to the accuracy metric, operation-wise accuracy was also recorded. This provides the accuracy values for expressions with either one or two operators. 
-
+Finally, to provide even further granularity to the accuracy metric, operation-count accuracy was also recorded, differentiating expressions with one operator from those with 2.
+    
 Together, these metrics provide a rigorous and interpretable evaluation framework for assessing the Boolean GPT model's performance.
 
 \subsection{2.3: Explore adaptations of the model architecture for this application}
 
-talk about dataset and character level output - how to adapt the model to this task
+\subsubsection{Model Downsizing}
+
+Boolean expressions are short, discrete, and deterministic, with a small fixed vocabulary and shallow compositional structure. As such, the initial transformer configuration was far too complex for this domain.
+
+The original GPT model used a block size of 256, an embedding dimension of 384, 6 attention heads, and 6 transformer layers. While expressive, this configuration introduced unnecessary computational overhead and increased the risk of overfitting. To better align model capacity with task complexity, the architecture was substantially downscaled. The final configuration reduced the block size to 32, the embedding dimension to 128, the number of attention heads to 4, and the number of layers to 4.
+
+This downsizing enabled longer training (5,000 iterations instead of 1,000) within practical time constraints and improved stability. Empirically, this change led to higher accuracy, confirming that Boolean logic evaluation benefits from compact, shallow architectures rather than deep transformers.
+
+\subsubsection{Input Representation}
+Despite these improvements, early results revealed partial prediction failures when using the full textual representation of Boolean values and operators. In particular, the model frequently produced incomplete or truncated outputs, such as predicting “lse” instead of “False” or “ue” instead of “True”. These errors indicate that the model struggled with longer token sequences and character-level alignment, rather than with the underlying logical structure.
+
+To address this issue, the input representation was simplified. Boolean constants were mapped from textual tokens (``True'', ``False'') to single-character symbols (``1'', ``0''), and logical operators (e.g., ``AND'', ``OR'', ``XOR'', ``NOT'') were replaced with their symbolic equivalents (``\&'', ``|'', ``\textasciicircum'', ``!''). This transformation significantly reduced sequence length, vocabulary size, and output ambiguity, while preserving the exact logical semantics of each expression.
+
+The effect of this representational change was substantial, as show in Table\ref{tab:bool_results}. Using the full textual representation, the model achieved an overall accuracy of approximately 38\%, indicating that more than half of the predictions were incorrect. Character error rates remained high, and performance degraded rapidly as expression complexity increased.
+
+In contrast, the simplified symbolic representation yielded an overall accuracy exceeding 75\%. Performance improved consistently across operators and expression complexities, confirming that the model's earlier failures were primarily due to representational inefficiencies rather than an inability to learn Boolean logic itself.
+
+These results show that, for Boolean logic evaluation, representation choice is as critical as architectural design. While downsizing the transformer improved efficiency and convergence, simplifying the input representation addressed the dominant source of error by reducing sequence length and eliminating partial-token failure modes. The resulting model is both more accurate and more robust, supporting the conclusion that symbolic reasoning tasks benefit from compact architectures paired with minimal, semantically aligned vocabularies.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\hline
+\textbf{Metric} & \textbf{Full Text Representation} & \textbf{Symbolic Representation} \\
+\hline
+Overall Accuracy & 38.00\% & 75.51\% \\
+Precision & 0.9091 & 0.7391 \\
+Recall & 0.4167 & 0.7391 \\
+F1 Score & 0.5714 & 0.7391 \\
+\hline
+\end{tabular}
+\caption{Comparison of performance using full textual and simplified representations.}
+\label{tab:bool_results}
+\end{table}
+
+
 
 \subsection{2.4: Explore results for a range of arithmetic options}
 
-This section evaluates the Boolean GPT model’s ability to learn and apply different logical operators, using quantitative results and representative examples. Evaluation on 49 unseen test expressions yields an overall exact match accuracy of 75.51\%, with a validity rate of 100\%, indicating that the model consistently generates well-formed Boolean outputs despite operating at the character level.
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\hline
+\textbf{Operator} & \textbf{Full Text Accuracy} & \textbf{Symbolic Accuracy} \\
+\hline
+AND (\&) & 40.00\% & 69.23\% \\
+OR (|) & 57.14\% & 100.00\% \\
+XOR (\textasciicircum) & 32.14\% & 72.41\% \\
+NOT (!) & 40.00\% & 100.00\% \\
+\hline
+\end{tabular}
+\caption{Operator-wise accuracy for Boolean expressions under different input representations.}
+\end{table}
 
-Operator-wise results show clear variation in difficulty. OR is learned perfectly, achieving 100\% accuracy, with expressions such as 1 | 0=1 and (0 | 0) | 0=0 always evaluated correctly. This reflects the simplicity and monotonic structure of OR, which is easy for the model to capture even in chained expressions. AND also performs well, with an accuracy of 76.92\%, and is generally correct in cases like 1 \& 0 \& 0=0. Errors typically arise when AND is combined with other operators, indicating challenges with composition rather than misunderstanding AND itself.
 
-NOT is also solved perfectly in this evaluation, but it is under-represented, appearing in only a single test case. While simple negation such as ! 0=1 is handled correctly, this result should be interpreted cautiously due to the small sample size.
+Evaluation on the unseen test expressions yields an overall exact match accuracy of 75.51\%.
 
+\subsubsection{OR operator}
+Operator-wise results show clear variation in difficulty. OR is learned perfectly, achieving 100\% accuracy, with expressions such as 1 | 0=1 and (0 | 0) | 0=0 always evaluated correctly. This reflects the simplicity and monotonic structure of OR, which is easy for the model to capture even in chained expressions. 
+
+\subsubsection{AND operator}
+AND also performs well, with an accuracy of 76.92\%, and is generally correct in cases like 1 \& 0 \& 0=0. Errors typically arise when AND is combined with other operators, indicating challenges with composition rather than misunderstanding AND itself.
+
+\subsubsection{NOT operator}
+NOT is also solved perfectly in this evaluation, but it is under-represented, appearing in only a handfull of test cases. While simple negation such as ! 0=1 is handled correctly, this result should be interpreted cautiously due to the small sample size.
+
+\subsubsection{XOR operator}
 XOR is the weakest operator, with an accuracy of 68.97\%. Many errors involve chained or nested XOR expressions, such as $1 \text{\textasciicircum} 1 \text{\textasciicircum} 1$ or $0 \text{\textasciicircum} (1 \text{\textasciicircum} 0)$, reflecting the non-linearly separable nature of XOR and the need to track parity across operands. This makes XOR substantially harder than AND or OR for the model.
 
 Expression complexity further explains these results. All single-operator expressions are solved correctly, while accuracy drops to 73.33\% for expressions containing two operators. This indicates that the main failure mode is compositional reasoning, particularly when multiple operators interact.
 
-The character error rate of 0.2449 reflects incorrect final truth values rather than malformed outputs, as Boolean outputs are short. Precision, recall, and F1 score are all 0.7391, indicating balanced performance across True and False classes. Overall, the model reliably learns simple Boolean operators, but struggles with XOR and with deeper compositional structure, highlighting the limits of character-level reasoning for non-linear logical operations.
+Precision, recall, and F1 score are all 0.7391, indicating balanced performance across True and False classes. Overall, the model reliably learns simple Boolean operators, but struggles with XOR and with deeper compositional structure, highlighting the limits of character-level reasoning for non-linear logical operations.
+
+
+\section{Part 3: Discussion}
+
+This assignment compared two symbolic reasoning tasks implemented using the same character-level transformer framework. While both tasks are deterministic and rule-based, their structural properties differ, leading to distinct architectural and representational requirements.
+
+A key similarity across both models is that large, language-style transformers were unnecessary. In both cases, substantial model downsizing proved optimal: fewer layers, smaller embedding sizes, and shorter context windows consistently improved performance. This reflects the limited depth and short-range dependencies inherent to symbolic expressions. Over-parameterised models not only increased computational cost but also caused overfitting. Early stopping was therefore essential in the Math GPT setting to preserve generalisation once validation loss began to diverge from training loss.
+
+The two tasks differed in where their difficulties arose. In Math GPT, the dominant challenge was algorithmic complexity. Operations such as addition and subtraction were learned reliably, while multiplication remained extremely difficult due to long dependency chains, quadratic digit interactions, and cascading carry errors. These issues were reflected in low exact-match accuracy but more moderate character error rates (CER), motivating the use of CER and MAE as complementary evaluation metrics. These metrics revealed that many failures were near-miss numerical errors rather than arbitrary outputs, providing a more nuanced assessment of model behaviour.
+
+In contrast, Boolean GPT was limited less by reasoning complexity and more by representation. When trained on full textual tokens (“True”, “False”, “AND”, etc.), the model frequently failed due to partial-token generation errors, despite often capturing the correct logical structure. Simplifying the representation to a compact symbolic vocabulary dramatically improved accuracy, demonstrating that for Boolean logic, sequence length and token alignment dominate performance. This highlights a fundamental difference between the tasks: Boolean reasoning is logically simpler but more sensitive to surface form at the character level.
+
+Evaluation strategies also reflected these differences. Accuracy was appropriate for both tasks, but Math GPT benefited from graded error metrics (CER, MAE), whereas Boolean GPT could be treated as a binary classification problem with precision, recall, and F1 scores. Operator-wise breakdowns in both cases were informative, consistently identifying multiplication and XOR as the hardest operators due to their non-linear or non-local structure.
+
+Overall, these experiments show that transformer-based models can learn symbolic reasoning patterns, but only when architectural capacity and representation are matched to task structure. Remaining limitations, particularly multiplication and deep compositional Boolean expressions, suggest that character-level transformers struggle with algorithmic reasoning. Future work could explore digit-level tokenisation or curriculum learning to better capture these underlying structures.
+
